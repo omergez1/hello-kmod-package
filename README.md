@@ -4,47 +4,49 @@ Hello-world Linux kernel module for the Raspberry Pi 5, packaged to be built by 
 
 The module prints `hello world` when loaded and `bye bye world` when unloaded.
 
-## Files
+## Layout
 
-| File | Description |
-|---|---|
-| `hello_kmod.c` | Module source |
-| `Makefile` | Kbuild Makefile (`obj-m := hello_kmod.o`), usable by Buildroot or standalone |
-
-## Building with Buildroot
-
-Buildroot downloads this repository and builds it with the `kernel-module` infrastructure. The package directory `package/hello-kmod/` contains:
-
-`hello-kmod.mk`
-```make
-HELLO_KMOD_VERSION = <commit sha>
-HELLO_KMOD_SITE = $(call github,omergez1,hello-kmod-package,$(HELLO_KMOD_VERSION))
-HELLO_KMOD_LICENSE = GPL-2.0
-
-$(eval $(kernel-module))
-$(eval $(generic-package))
+```
+hello-kmod-package/
+├── src/                     ← module source: what Buildroot downloads and compiles
+│   ├── hello_kmod.c
+│   └── Makefile             (Kbuild: obj-m := hello_kmod.o)
+└── package/hello-kmod/      ← the Buildroot package: copy into Buildroot's package/
+    ├── Config.in            (menuconfig entry BR2_PACKAGE_HELLO_KMOD)
+    ├── hello-kmod.mk        (version, download site, kernel-module build)
+    └── hello-kmod.hash      (sha256 of the downloaded tarball)
 ```
 
-`Config.in`
-```
-config BR2_PACKAGE_HELLO_KMOD
-	bool "hello-kmod"
-	depends on BR2_LINUX_KERNEL
-	help
-	  Hello-world kernel module.
-```
+A Buildroot package does not contain source code. It describes where to download the source, how to verify it and how to build it. Buildroot downloads this repository at tag `v1.0` from GitHub, verifies it against `hello-kmod.hash`, and builds `src/` against the target kernel (`HELLO_KMOD_MODULE_SUBDIRS = src`).
 
-…plus `hello-kmod.hash` (sha256 of the downloaded tarball) and a `source "package/hello-kmod/Config.in"` line in `package/Config.in`.
+## Adding the package to Buildroot
 
-Enable it with `make menuconfig` (**Target packages → Hardware handling → hello-kmod**) and rebuild. On the target:
+1. Copy the package directory:
+   ```bash
+   cp -r package/hello-kmod <buildroot>/package/
+   ```
+2. Reference it in `<buildroot>/package/Config.in`, in the **Hardware handling** menu:
+   ```
+   source "package/hello-kmod/Config.in"
+   ```
+3. Enable it (requires a Linux kernel to be built by Buildroot):
+   `make menuconfig` → **Target packages → Hardware handling → hello-kmod**
+4. Build:
+   ```bash
+   make
+   ```
+   The module is installed in the image as `/lib/modules/<kernel version>/updates/hello_kmod.ko`.
+
+## On the target
 
 ```bash
-modprobe hello_kmod
-modprobe -r hello_kmod
+modprobe hello_kmod      # hello_kmod: hello world
+modprobe -r hello_kmod   # hello_kmod: bye bye world
 ```
 
-## Standalone build
+## Standalone build (without Buildroot)
 
 ```bash
+cd src
 make KDIR=<kernel build dir> ARCH=arm64 CROSS_COMPILE=aarch64-linux-
 ```
