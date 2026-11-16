@@ -1,0 +1,12 @@
+config BR2_PACKAGE_HELLO_KMOD
+	bool "hello-kmod"
+	depends on BR2_LINUX_KERNEL
+	help
+	  hello-kmod - a trivial hello world kernel module.
+	  Prints "hello world" when loaded and "bye bye world"
+	  when unloaded.
+
+	  https://github.com/omergez1/hello-kmod-package
+
+comment "hello-kmod needs a Linux kernel to be built"
+	depends on !BR2_LINUX_KERNEL
